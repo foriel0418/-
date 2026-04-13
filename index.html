@@ -1,1372 +1,155 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>一造学习计划 - 云同步打卡系统</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft YaHei", sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-        
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-        
-        header {
-            background: white;
-            border-radius: 16px;
-            padding: 24px;
-            margin-bottom: 20px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-        }
-        
-        h1 {
-            color: #2d3748;
-            font-size: 28px;
-            margin-bottom: 8px;
-        }
-        
-        .subtitle {
-            color: #718096;
-            font-size: 14px;
-        }
-        
-        .exam-date {
-            display: inline-block;
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            color: white;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 14px;
-            margin-top: 12px;
-        }
-        
-        /* 云同步状态 */
-        .sync-status {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-top: 15px;
-            padding: 12px 16px;
-            background: #f0fdf4;
-            border-radius: 10px;
-            border: 1px solid #86efac;
-        }
-        
-        .sync-status.offline {
-            background: #fef3c7;
-            border-color: #fcd34d;
-        }
-        
-        .sync-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: #22c55e;
-            animation: pulse 2s infinite;
-        }
-        
-        .sync-status.offline .sync-dot {
-            background: #f59e0b;
-            animation: none;
-        }
-        
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-        
-        .sync-text {
-            font-size: 13px;
-            color: #166534;
-        }
-        
-        .sync-status.offline .sync-text {
-            color: #92400e;
-        }
-        
-        .user-info {
-            margin-left: auto;
-            font-size: 13px;
-            color: #6b7280;
-        }
-        
-        .stats-bar {
-            background: white;
-            border-radius: 16px;
-            padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-            gap: 16px;
-        }
-        
-        .stat-item {
-            text-align: center;
-            padding: 10px;
-            background: #f7fafc;
-            border-radius: 12px;
-        }
-        
-        .stat-number {
-            font-size: 32px;
-            font-weight: bold;
-            color: #667eea;
-        }
-        
-        .stat-number.hours {
-            color: #38a169;
-        }
-        
-        .stat-label {
-            font-size: 13px;
-            color: #718096;
-            margin-top: 4px;
-        }
-        
-        .progress-bar {
-            grid-column: 1 / -1;
-            background: #e2e8f0;
-            border-radius: 10px;
-            height: 24px;
-            overflow: hidden;
-            position: relative;
-        }
-        
-        .progress-fill {
-            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-            height: 100%;
-            border-radius: 10px;
-            transition: width 0.5s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 12px;
-            font-weight: bold;
-        }
-        
-        .filter-bar {
-            background: white;
-            border-radius: 16px;
-            padding: 16px 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            align-items: center;
-        }
-        
-        .filter-btn {
-            padding: 10px 20px;
-            border: 2px solid #e2e8f0;
-            border-radius: 25px;
-            background: white;
-            cursor: pointer;
-            font-size: 14px;
-            transition: all 0.3s;
-        }
-        
-        .filter-btn:hover {
-            border-color: #667eea;
-            color: #667eea;
-        }
-        
-        .filter-btn.active {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border-color: transparent;
-        }
-        
-        .tasks-container {
-            background: white;
-            border-radius: 16px;
-            padding: 24px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-        }
-        
-        .stage-section {
-            margin-bottom: 24px;
-            border: 2px solid #e2e8f0;
-            border-radius: 12px;
-            overflow: hidden;
-        }
-        
-        .stage-section:last-child {
-            margin-bottom: 0;
-        }
-        
-        .stage-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 16px 20px;
-            cursor: pointer;
-            transition: background 0.3s;
-        }
-        
-        .stage-header:hover {
-            background: rgba(0,0,0,0.05);
-        }
-        
-        .stage-基础阶段 { background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); }
-        .stage-强化阶段 { background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%); }
-        .stage-冲刺阶段 { background: linear-gradient(135deg, #fce4ec 0%, #f8bbd9 100%); }
-        .stage-考前阶段 { background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); }
-        
-        .stage-title {
-            font-size: 18px;
-            font-weight: bold;
-            color: #2d3748;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .stage-info {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-        }
-        
-        .stage-progress {
-            font-size: 14px;
-            color: #718096;
-            background: white;
-            padding: 6px 14px;
-            border-radius: 20px;
-        }
-        
-        .stage-hours {
-            font-size: 14px;
-            color: #38a169;
-            background: #c6f6d5;
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-weight: bold;
-        }
-        
-        .stage-content {
-            padding: 20px;
-            background: white;
-            display: none;
-        }
-        
-        .stage-content.show {
-            display: block;
-        }
-        
-        .week-section {
-            margin-bottom: 16px;
-            padding-bottom: 16px;
-            border-bottom: 1px dashed #e2e8f0;
-        }
-        
-        .week-section:last-child {
-            border-bottom: none;
-            margin-bottom: 0;
-            padding-bottom: 0;
-        }
-        
-        .week-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 10px;
-            cursor: pointer;
-            padding: 10px 14px;
-            background: #f7fafc;
-            border-radius: 10px;
-        }
-        
-        .week-header:hover {
-            background: #edf2f7;
-        }
-        
-        .week-title {
-            font-size: 15px;
-            font-weight: bold;
-            color: #2d3748;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .week-info {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        
-        .week-progress {
-            font-size: 13px;
-            color: #718096;
-        }
-        
-        .week-hours {
-            font-size: 13px;
-            color: #38a169;
-            font-weight: bold;
-        }
-        
-        .task-list {
-            display: none;
-            padding-left: 8px;
-        }
-        
-        .task-list.show {
-            display: block;
-        }
-        
-        .task-item {
-            display: flex;
-            align-items: flex-start;
-            padding: 12px 14px;
-            margin-bottom: 6px;
-            background: #f7fafc;
-            border-radius: 10px;
-            transition: all 0.3s;
-            border: 2px solid transparent;
-        }
-        
-        .task-item:hover {
-            background: #edf2f7;
-        }
-        
-        .task-item.completed {
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
-            border-color: #667eea;
-        }
-        
-        .task-checkbox {
-            width: 24px;
-            height: 24px;
-            border: 2px solid #cbd5e0;
-            border-radius: 6px;
-            cursor: pointer;
-            margin-right: 12px;
-            flex-shrink: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.3s;
-        }
-        
-        .task-checkbox:hover {
-            border-color: #667eea;
-        }
-        
-        .task-checkbox.checked {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-color: transparent;
-        }
-        
-        .task-checkbox.checked::after {
-            content: "✓";
-            color: white;
-            font-size: 14px;
-            font-weight: bold;
-        }
-        
-        .task-content {
-            flex: 1;
-        }
-        
-        .task-name {
-            font-size: 14px;
-            color: #2d3748;
-            margin-bottom: 4px;
-        }
-        
-        .task-item.completed .task-name {
-            text-decoration: line-through;
-            color: #a0aec0;
-        }
-        
-        .task-meta {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-        
-        .task-subject {
-            display: inline-block;
-            padding: 2px 10px;
-            border-radius: 12px;
-            font-size: 11px;
-            font-weight: bold;
-        }
-        
-        .subject-造价管理 { background: #e3f2fd; color: #1976d2; }
-        .subject-工程计价 { background: #fff3e0; color: #f57c00; }
-        .subject-工程计量 { background: #e8f5e9; color: #388e3c; }
-        .subject-案例分析 { background: #fce4ec; color: #c2185b; }
-        .subject-复习巩固 { background: #f3e5f5; color: #7b1fa2; }
-        .subject-模拟考试 { background: #e0f7fa; color: #00838f; }
-        .subject-真题训练 { background: #fff8e1; color: #ffa000; }
-        .subject-考前准备 { background: #efebe9; color: #5d4037; }
-        .subject-考前冲刺 { background: #e8eaf6; color: #3f51b5; }
-        .subject-考试 { background: #ffcdd2; color: #c62828; }
-        
-        .task-date {
-            font-size: 11px;
-            color: #718096;
-        }
-        
-        .task-hours {
-            display: inline-block;
-            padding: 2px 8px;
-            background: #c6f6d5;
-            color: #276749;
-            border-radius: 10px;
-            font-size: 11px;
-            font-weight: bold;
-        }
-        
-        .action-btn {
-            background: #e53e3e;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 13px;
-            margin-left: auto;
-        }
-        
-        .action-btn:hover {
-            opacity: 0.9;
-        }
-        
-        .export-btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 14px;
-            margin-left: 10px;
-        }
-        
-        .week-section.hidden,
-        .task-item.hidden {
-            display: none;
-        }
-        
-        .exam-day {
-            background: linear-gradient(135deg, #ffcdd2 0%, #ef9a9a 100%) !important;
-            border: 2px solid #e53935 !important;
-        }
-        
-        .exam-day .task-name {
-            color: #c62828;
-            font-weight: bold;
-        }
-        
-        /* 登录弹窗 */
-        .login-modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.5);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .login-modal.show {
-            display: flex;
-        }
-        
-        .login-box {
-            background: white;
-            padding: 30px;
-            border-radius: 16px;
-            width: 90%;
-            max-width: 400px;
-            text-align: center;
-        }
-        
-        .login-box h2 {
-            margin-bottom: 20px;
-            color: #2d3748;
-        }
-        
-        .login-box p {
-            color: #718096;
-            margin-bottom: 20px;
-            font-size: 14px;
-        }
-        
-        .login-input {
-            width: 100%;
-            padding: 12px 16px;
-            border: 2px solid #e2e8f0;
-            border-radius: 10px;
-            font-size: 16px;
-            margin-bottom: 15px;
-        }
-        
-        .login-input:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-        
-        .login-btn {
-            width: 100%;
-            padding: 14px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-size: 16px;
-            cursor: pointer;
-            margin-bottom: 10px;
-        }
-        
-        .login-btn:hover {
-            opacity: 0.9;
-        }
-        
-        .skip-btn {
-            background: #f7fafc;
-            color: #718096;
-        }
-        
-        @media (max-width: 768px) {
-            body {
-                padding: 10px;
-            }
-            
-            header, .stats-bar, .filter-bar, .tasks-container {
-                border-radius: 12px;
-                padding: 16px;
-            }
-            
-            h1 {
-                font-size: 22px;
-            }
-            
-            .stat-number {
-                font-size: 24px;
-            }
-            
-            .filter-btn {
-                padding: 8px 14px;
-                font-size: 13px;
-            }
-            
-            .stage-info {
-                flex-direction: column;
-                align-items: flex-end;
-                gap: 6px;
-            }
-        }
-    </style>
-</head>
-<body>
-    <!-- 登录弹窗 -->
-    <div class="login-modal" id="loginModal">
-        <div class="login-box">
-            <h2>设置用户ID</h2>
-            <p>输入一个唯一的用户ID（如手机号或邮箱），用于在不同设备间同步您的学习进度。</p>
-            <input type="text" class="login-input" id="userIdInput" placeholder="请输入用户ID">
-            <button class="login-btn" onclick="saveUserId()">确认</button>
-            <button class="login-btn skip-btn" onclick="skipLogin()">跳过（仅本地存储）</button>
-        </div>
-    </div>
+一级造价工程师学习计划
+2026年考试备考 - 云同步打卡系统
 
-    <div class="container">
-        <header>
-            <h1>一级造价工程师学习计划</h1>
-            <p class="subtitle">2026年考试备考 - 云同步打卡系统</p>
-            <span class="exam-date">考试日期: 2026年10月17-18日</span>
-            <div class="sync-status" id="syncStatus">
-                <div class="sync-dot"></div>
-                <span class="sync-text">云同步已启用</span>
-                <span class="user-info" id="userInfo"></span>
-            </div>
-        </header>
-        
-        <div class="stats-bar">
-            <div class="stat-item">
-                <div class="stat-number" id="totalTasks">0</div>
-                <div class="stat-label">总任务数</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-number" id="completedTasks">0</div>
-                <div class="stat-label">已完成</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-number" id="remainingTasks">0</div>
-                <div class="stat-label">未完成</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-number" id="completionRate">0%</div>
-                <div class="stat-label">完成率</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-number hours" id="totalHours">0</div>
-                <div class="stat-label">计划总时长</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-number hours" id="completedHours">0</div>
-                <div class="stat-label">已完成时长</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-number hours" id="remainingHours">0</div>
-                <div class="stat-label">剩余时长</div>
-            </div>
-            <div class="progress-bar">
-                <div class="progress-fill" id="progressFill" style="width: 0%">0%</div>
-            </div>
-        </div>
-        
-        <div class="filter-bar">
-            <span style="color: #718096; font-size: 14px;">筛选:</span>
-            <button class="filter-btn active" data-filter="all">全部</button>
-            <button class="filter-btn" data-filter="基础阶段">基础阶段</button>
-            <button class="filter-btn" data-filter="强化阶段">强化阶段</button>
-            <button class="filter-btn" data-filter="冲刺阶段">冲刺阶段</button>
-            <button class="filter-btn" data-filter="考前阶段">考前阶段</button>
-            <button class="filter-btn" data-filter="completed">已完成</button>
-            <button class="filter-btn" data-filter="pending">未完成</button>
-            <button class="export-btn" onclick="exportData()">导出数据</button>
-            <button class="action-btn" onclick="clearAllData()">清除数据</button>
-        </div>
-        
-        <div class="tasks-container" id="tasksContainer">
-            <!-- 任务列表将通过JS动态生成 -->
-        </div>
-    </div>
-
-    <script>
-        // ==================== 云存储配置 ====================
-        // 使用免费的 JSONBin.io 服务实现云同步
-        // 您也可以替换为自己的后端API
-        const CLOUD_CONFIG = {
-            // 使用 localStorage 模拟云存储（无需后端）
-            // 如果需要真正的云同步，可以接入 Firebase、Supabase 等服务
-            useLocalStorage: true,
-            // 云同步key前缀
-            syncKeyPrefix: 'yizao_cloud_'
-        };
-        
-        // 当前用户ID
-        let currentUserId = null;
-        
-        // 学习计划数据
-        const studyPlan = [
-            // 第1周：基础阶段
-            { week: 1, stage: "基础阶段", tasks: [
-                { date: "3月17日", weekday: "周一", subject: "造价管理", name: "第一章 工程造价管理基本制度（第一节 概述）", hours: 2 },
-                { date: "3月18日", weekday: "周二", subject: "造价管理", name: "第一章 工程造价管理基本制度（第二节 造价工程师）", hours: 2 },
-                { date: "3月19日", weekday: "周三", subject: "造价管理", name: "第一章 工程造价管理基本制度（第三节 工程造价管理）", hours: 2 },
-                { date: "3月20日", weekday: "周四", subject: "造价管理", name: "第二章 相关法律法规（第一节 建筑法）", hours: 2 },
-                { date: "3月21日", weekday: "周五", subject: "造价管理", name: "第二章 相关法律法规（第二节 合同法）", hours: 2 },
-                { date: "3月22日", weekday: "周六", subject: "造价管理", name: "第二章 相关法律法规（第三节 招投标法）", hours: 2 },
-                { date: "3月23日", weekday: "周日", subject: "造价管理", name: "本周复习 + 章节练习题", hours: 2 }
-            ]},
-            { week: 2, stage: "基础阶段", tasks: [
-                { date: "3月24日", weekday: "周一", subject: "造价管理", name: "第三章 工程项目管理（第一节 项目管理概述）", hours: 2 },
-                { date: "3月25日", weekday: "周二", subject: "造价管理", name: "第三章 工程项目管理（第二节 项目组织）", hours: 2 },
-                { date: "3月26日", weekday: "周三", subject: "造价管理", name: "第三章 工程项目管理（第三节 项目计划与控制）", hours: 2 },
-                { date: "3月27日", weekday: "周四", subject: "造价管理", name: "第四章 工程经济（第一节 资金时间价值）", hours: 2 },
-                { date: "3月28日", weekday: "周五", subject: "造价管理", name: "第四章 工程经济（第一节 资金时间价值续）", hours: 2 },
-                { date: "3月29日", weekday: "周六", subject: "造价管理", name: "第四章 工程经济（第二节 投资方案经济评价）", hours: 2 },
-                { date: "3月30日", weekday: "周日", subject: "造价管理", name: "本周复习 + 章节练习题", hours: 2 }
-            ]},
-            { week: 3, stage: "基础阶段", tasks: [
-                { date: "3月31日", weekday: "周一", subject: "造价管理", name: "第四章 工程经济（第三节 不确定性分析）", hours: 2 },
-                { date: "4月1日", weekday: "周二", subject: "造价管理", name: "第四章 工程经济（第四节 价值工程）", hours: 2 },
-                { date: "4月2日", weekday: "周三", subject: "造价管理", name: "第五章 工程项目投融资（第一节 项目资金来源）", hours: 2 },
-                { date: "4月3日", weekday: "周四", subject: "造价管理", name: "第五章 工程项目投融资（第二节 融资方案）", hours: 2 },
-                { date: "4月4日", weekday: "周五", subject: "造价管理", name: "第五章 工程项目投融资（第三节 融资成本）", hours: 2 },
-                { date: "4月5日", weekday: "周六", subject: "造价管理", name: "第五章 工程项目投融资（第四节 融资风险）", hours: 2 },
-                { date: "4月6日", weekday: "周日", subject: "造价管理", name: "本周复习 + 章节练习题", hours: 2 }
-            ]},
-            { week: 4, stage: "基础阶段", tasks: [
-                { date: "4月7日", weekday: "周一", subject: "造价管理", name: "第六章 工程建设全过程造价管理（第一节 决策阶段）", hours: 2 },
-                { date: "4月8日", weekday: "周二", subject: "造价管理", name: "第六章 工程建设全过程造价管理（第二节 设计阶段）", hours: 2 },
-                { date: "4月9日", weekday: "周三", subject: "造价管理", name: "第六章 工程建设全过程造价管理（第三节 发承包阶段）", hours: 2 },
-                { date: "4月10日", weekday: "周四", subject: "造价管理", name: "第六章 工程建设全过程造价管理（第四节 施工阶段）", hours: 2 },
-                { date: "4月11日", weekday: "周五", subject: "造价管理", name: "第六章 工程建设全过程造价管理（第五节 竣工阶段）", hours: 2 },
-                { date: "4月12日", weekday: "周六", subject: "造价管理", name: "造价管理全书复习", hours: 3 },
-                { date: "4月13日", weekday: "周日", subject: "造价管理", name: "综合练习 + 错题整理", hours: 3 }
-            ]},
-            { week: 5, stage: "基础阶段", tasks: [
-                { date: "4月14日", weekday: "周一", subject: "工程计价", name: "第一章 工程造价构成（第一节 概述）", hours: 2 },
-                { date: "4月15日", weekday: "周二", subject: "工程计价", name: "第一章 工程造价构成（第二节 建设投资）", hours: 2 },
-                { date: "4月16日", weekday: "周三", subject: "工程计价", name: "第一章 工程造价构成（第三节 建设期利息）", hours: 2 },
-                { date: "4月17日", weekday: "周四", subject: "工程计价", name: "第二章 工程计价基本原理（第一节 工程计价原理）", hours: 2 },
-                { date: "4月18日", weekday: "周五", subject: "工程计价", name: "第二章 工程计价基本原理（第二节 工程量清单）", hours: 2 },
-                { date: "4月19日", weekday: "周六", subject: "工程计价", name: "第二章 工程计价基本原理（第三节 计价方法）", hours: 2 },
-                { date: "4月20日", weekday: "周日", subject: "工程计价", name: "本周复习 + 章节练习题", hours: 2 }
-            ]},
-            { week: 6, stage: "基础阶段", tasks: [
-                { date: "4月21日", weekday: "周一", subject: "工程计价", name: "第三章 建设项目决策和设计阶段工程造价预测（第一节 投资估算）", hours: 2 },
-                { date: "4月22日", weekday: "周二", subject: "工程计价", name: "第三章 建设项目决策和设计阶段工程造价预测（第二节 设计概算）", hours: 2 },
-                { date: "4月23日", weekday: "周三", subject: "工程计价", name: "第三章 建设项目决策和设计阶段工程造价预测（第三节 施工图预算）", hours: 2 },
-                { date: "4月24日", weekday: "周四", subject: "工程计价", name: "第四章 建设项目发承包阶段合同价款的约定（第一节 招标工程量清单）", hours: 2 },
-                { date: "4月25日", weekday: "周五", subject: "工程计价", name: "第四章 建设项目发承包阶段合同价款的约定（第二节 招标控制价）", hours: 2 },
-                { date: "4月26日", weekday: "周六", subject: "工程计价", name: "第四章 建设项目发承包阶段合同价款的约定（第三节 投标报价）", hours: 2 },
-                { date: "4月27日", weekday: "周日", subject: "工程计价", name: "本周复习 + 章节练习题", hours: 2 }
-            ]},
-            { week: 7, stage: "基础阶段", tasks: [
-                { date: "4月28日", weekday: "周一", subject: "工程计价", name: "第四章 建设项目发承包阶段合同价款的约定（第四节 合同价款）", hours: 2 },
-                { date: "4月29日", weekday: "周二", subject: "工程计价", name: "第五章 施工阶段合同价款的调整（第一节 工程变更）", hours: 2 },
-                { date: "4月30日", weekday: "周三", subject: "工程计价", name: "第五章 施工阶段合同价款的调整（第二节 工程索赔）", hours: 2 },
-                { date: "5月1日", weekday: "周四", subject: "工程计价", name: "第五章 施工阶段合同价款的调整（第三节 价款调整）", hours: 2 },
-                { date: "5月2日", weekday: "周五", subject: "工程计价", name: "第六章 竣工决算的编制和竣工后质量保证金的处理", hours: 2 },
-                { date: "5月3日", weekday: "周六", subject: "工程计价", name: "工程计价全书复习", hours: 3 },
-                { date: "5月4日", weekday: "周日", subject: "工程计价", name: "综合练习 + 错题整理", hours: 3 }
-            ]},
-            { week: 8, stage: "基础阶段", tasks: [
-                { date: "5月5日", weekday: "周一", subject: "工程计量", name: "第一章 工程计量的基本原理与方法", hours: 2 },
-                { date: "5月6日", weekday: "周二", subject: "工程计量", name: "第二章 建筑面积计算（第一节 计算规则）", hours: 2 },
-                { date: "5月7日", weekday: "周三", subject: "工程计量", name: "第二章 建筑面积计算（第二节 应用示例）", hours: 2 },
-                { date: "5月8日", weekday: "周四", subject: "工程计量", name: "第三章 建筑工程工程量计算（第一节 土石方工程）", hours: 2 },
-                { date: "5月9日", weekday: "周五", subject: "工程计量", name: "第三章 建筑工程工程量计算（第二节 地基处理）", hours: 2 },
-                { date: "5月10日", weekday: "周六", subject: "工程计量", name: "第三章 建筑工程工程量计算（第三节 桩基础工程）", hours: 2 },
-                { date: "5月11日", weekday: "周日", subject: "工程计量", name: "本周复习 + 章节练习题", hours: 2 }
-            ]},
-            { week: 9, stage: "基础阶段", tasks: [
-                { date: "5月12日", weekday: "周一", subject: "工程计量", name: "第三章 建筑工程工程量计算（第四节 砌筑工程）", hours: 2 },
-                { date: "5月13日", weekday: "周二", subject: "工程计量", name: "第三章 建筑工程工程量计算（第五节 混凝土工程）", hours: 2 },
-                { date: "5月14日", weekday: "周三", subject: "工程计量", name: "第三章 建筑工程工程量计算（第六节 钢筋工程）", hours: 2 },
-                { date: "5月15日", weekday: "周四", subject: "工程计量", name: "第三章 建筑工程工程量计算（第七节 金属结构工程）", hours: 2 },
-                { date: "5月16日", weekday: "周五", subject: "工程计量", name: "第三章 建筑工程工程量计算（第八节 木结构工程）", hours: 2 },
-                { date: "5月17日", weekday: "周六", subject: "工程计量", name: "第三章 建筑工程工程量计算（第九节 屋面工程）", hours: 2 },
-                { date: "5月18日", weekday: "周日", subject: "工程计量", name: "本周复习 + 章节练习题", hours: 2 }
-            ]},
-            { week: 10, stage: "基础阶段", tasks: [
-                { date: "5月19日", weekday: "周一", subject: "工程计量", name: "第三章 建筑工程工程量计算（第十节 保温隔热工程）", hours: 2 },
-                { date: "5月20日", weekday: "周二", subject: "工程计量", name: "第四章 装饰装修工程工程量计算（第一节 楼地面）", hours: 2 },
-                { date: "5月21日", weekday: "周三", subject: "工程计量", name: "第四章 装饰装修工程工程量计算（第二节 墙柱面）", hours: 2 },
-                { date: "5月22日", weekday: "周四", subject: "工程计量", name: "第四章 装饰装修工程工程量计算（第三节 天棚）", hours: 2 },
-                { date: "5月23日", weekday: "周五", subject: "工程计量", name: "第四章 装饰装修工程工程量计算（第四节 门窗）", hours: 2 },
-                { date: "5月24日", weekday: "周六", subject: "工程计量", name: "第四章 装饰装修工程工程量计算（第五节 油漆涂料）", hours: 2 },
-                { date: "5月25日", weekday: "周日", subject: "工程计量", name: "本周复习 + 章节练习题", hours: 2 }
-            ]},
-            { week: 11, stage: "基础阶段", tasks: [
-                { date: "5月26日", weekday: "周一", subject: "工程计量", name: "第五章 安装工程工程量计算（第一节 电气工程）", hours: 2 },
-                { date: "5月27日", weekday: "周二", subject: "工程计量", name: "第五章 安装工程工程量计算（第二节 给排水工程）", hours: 2 },
-                { date: "5月28日", weekday: "周三", subject: "工程计量", name: "第五章 安装工程工程量计算（第三节 通风空调工程）", hours: 2 },
-                { date: "5月29日", weekday: "周四", subject: "工程计量", name: "第五章 安装工程工程量计算（第四节 消防工程）", hours: 2 },
-                { date: "5月30日", weekday: "周五", subject: "工程计量", name: "工程计量综合复习", hours: 2 },
-                { date: "5月31日", weekday: "周六", subject: "工程计量", name: "工程计量全书复习", hours: 3 },
-                { date: "6月1日", weekday: "周日", subject: "工程计量", name: "综合练习 + 错题整理", hours: 3 }
-            ]},
-            { week: 12, stage: "基础阶段", tasks: [
-                { date: "6月2日", weekday: "周一", subject: "案例分析", name: "案例分析概述 + 第一章 建设项目投资估算", hours: 2 },
-                { date: "6月3日", weekday: "周二", subject: "案例分析", name: "第一章 投资估算方法与计算", hours: 2 },
-                { date: "6月4日", weekday: "周三", subject: "案例分析", name: "第一章 财务评价基础", hours: 2 },
-                { date: "6月5日", weekday: "周四", subject: "案例分析", name: "第一章 财务评价指标计算", hours: 2 },
-                { date: "6月6日", weekday: "周五", subject: "案例分析", name: "第一章 不确定性分析", hours: 2 },
-                { date: "6月7日", weekday: "周六", subject: "案例分析", name: "第一章 典型例题精讲", hours: 3 },
-                { date: "6月8日", weekday: "周日", subject: "复习巩固", name: "基础阶段总复习 + 自测", hours: 3 }
-            ]},
-            // 第13-22周：强化阶段
-            { week: 13, stage: "强化阶段", tasks: [
-                { date: "6月9日", weekday: "周一", subject: "案例分析", name: "第二章 工程设计、施工方案技术经济分析（价值工程）", hours: 2.5 },
-                { date: "6月10日", weekday: "周二", subject: "案例分析", name: "第二章 网络计划优化", hours: 2.5 },
-                { date: "6月11日", weekday: "周三", subject: "案例分析", name: "第二章 决策树方法应用", hours: 2.5 },
-                { date: "6月12日", weekday: "周四", subject: "案例分析", name: "第二章 综合评分法", hours: 2.5 },
-                { date: "6月13日", weekday: "周五", subject: "案例分析", name: "第二章 典型例题精讲", hours: 2.5 },
-                { date: "6月14日", weekday: "周六", subject: "案例分析", name: "第二章 综合练习", hours: 3 },
-                { date: "6月15日", weekday: "周日", subject: "案例分析", name: "第二章 答疑与总结", hours: 3 }
-            ]},
-            { week: 14, stage: "强化阶段", tasks: [
-                { date: "6月16日", weekday: "周一", subject: "案例分析", name: "第三章 工程计量与计价（定额编制）", hours: 2.5 },
-                { date: "6月17日", weekday: "周二", subject: "案例分析", name: "第三章 工程量计算规则", hours: 2.5 },
-                { date: "6月18日", weekday: "周三", subject: "案例分析", name: "第三章 工程量清单编制", hours: 2.5 },
-                { date: "6月19日", weekday: "周四", subject: "案例分析", name: "第三章 综合单价分析", hours: 2.5 },
-                { date: "6月20日", weekday: "周五", subject: "案例分析", name: "第三章 典型例题精讲", hours: 2.5 },
-                { date: "6月21日", weekday: "周六", subject: "案例分析", name: "第三章 综合练习", hours: 3 },
-                { date: "6月22日", weekday: "周日", subject: "案例分析", name: "第三章 答疑与总结 + 基础阶段总结", hours: 3 }
-            ]},
-            { week: 15, stage: "强化阶段", tasks: [
-                { date: "6月23日", weekday: "周一", subject: "案例分析", name: "第四章 建设工程招标投标（招标程序）", hours: 2.5 },
-                { date: "6月24日", weekday: "周二", subject: "案例分析", name: "第四章 投标策略与报价技巧", hours: 2.5 },
-                { date: "6月25日", weekday: "周三", subject: "案例分析", name: "第四章 合同价款确定", hours: 2.5 },
-                { date: "6月26日", weekday: "周四", subject: "案例分析", name: "第四章 典型例题精讲", hours: 2.5 },
-                { date: "6月27日", weekday: "周五", subject: "案例分析", name: "第四章 综合练习", hours: 2.5 },
-                { date: "6月28日", weekday: "周六", subject: "案例分析", name: "案例分析专项强化训练", hours: 3 },
-                { date: "6月29日", weekday: "周日", subject: "案例分析", name: "案例分析专项强化训练", hours: 3 }
-            ]},
-            { week: 16, stage: "强化阶段", tasks: [
-                { date: "6月30日", weekday: "周一", subject: "案例分析", name: "第五章 工程合同价款管理（合同价款调整）", hours: 2.5 },
-                { date: "7月1日", weekday: "周二", subject: "案例分析", name: "第五章 工程索赔计算", hours: 2.5 },
-                { date: "7月2日", weekday: "周三", subject: "案例分析", name: "第五章 工程变更计价", hours: 2.5 },
-                { date: "7月3日", weekday: "周四", subject: "案例分析", name: "第五章 典型例题精讲", hours: 2.5 },
-                { date: "7月4日", weekday: "周五", subject: "案例分析", name: "第五章 综合练习", hours: 2.5 },
-                { date: "7月5日", weekday: "周六", subject: "案例分析", name: "案例分析专项强化训练", hours: 3 },
-                { date: "7月6日", weekday: "周日", subject: "案例分析", name: "案例分析专项强化训练", hours: 3 }
-            ]},
-            { week: 17, stage: "强化阶段", tasks: [
-                { date: "7月7日", weekday: "周一", subject: "案例分析", name: "第六章 工程结算与决算（工程结算）", hours: 2.5 },
-                { date: "7月8日", weekday: "周二", subject: "案例分析", name: "第六章 工程竣工决算", hours: 2.5 },
-                { date: "7月9日", weekday: "周三", subject: "案例分析", name: "第六章 典型例题精讲", hours: 2.5 },
-                { date: "7月10日", weekday: "周四", subject: "案例分析", name: "案例分析计算题专项训练（一）", hours: 2.5 },
-                { date: "7月11日", weekday: "周五", subject: "案例分析", name: "案例分析计算题专项训练（二）", hours: 2.5 },
-                { date: "7月12日", weekday: "周六", subject: "案例分析", name: "案例分析综合训练", hours: 3 },
-                { date: "7月13日", weekday: "周日", subject: "案例分析", name: "案例分析综合训练", hours: 3 }
-            ]},
-            { week: 18, stage: "强化阶段", tasks: [
-                { date: "7月14日", weekday: "周一", subject: "造价管理", name: "专题复习（易错点串讲）", hours: 3 },
-                { date: "7月15日", weekday: "周二", subject: "造价管理", name: "专题复习（易错点串讲）", hours: 3 },
-                { date: "7月16日", weekday: "周三", subject: "工程计价", name: "专题复习（易错点串讲）", hours: 3 },
-                { date: "7月17日", weekday: "周四", subject: "工程计价", name: "专题复习（易错点串讲）", hours: 3 },
-                { date: "7月18日", weekday: "周五", subject: "工程计量", name: "专题复习（易错点串讲）", hours: 3 },
-                { date: "7月19日", weekday: "周六", subject: "案例分析", name: "专题复习（答题技巧）", hours: 3 },
-                { date: "7月20日", weekday: "周日", subject: "复习巩固", name: "强化阶段总结 + 错题整理", hours: 3 }
-            ]},
-            { week: 19, stage: "强化阶段", tasks: [
-                { date: "7月21日", weekday: "周一", subject: "造价管理", name: "真题实战（2023年）", hours: 3 },
-                { date: "7月22日", weekday: "周二", subject: "造价管理", name: "真题分析总结", hours: 2 },
-                { date: "7月23日", weekday: "周三", subject: "工程计价", name: "真题实战（2023年）", hours: 3 },
-                { date: "7月24日", weekday: "周四", subject: "工程计价", name: "真题分析总结", hours: 2 },
-                { date: "7月25日", weekday: "周五", subject: "工程计量", name: "真题实战（2023年）", hours: 3 },
-                { date: "7月26日", weekday: "周六", subject: "工程计量", name: "真题分析总结", hours: 2 },
-                { date: "7月27日", weekday: "周日", subject: "复习巩固", name: "真题错题整理", hours: 3 }
-            ]},
-            { week: 20, stage: "强化阶段", tasks: [
-                { date: "7月28日", weekday: "周一", subject: "案例分析", name: "案例分析真题实战（2023年）案例一、二", hours: 3 },
-                { date: "7月29日", weekday: "周二", subject: "案例分析", name: "案例分析真题实战（2023年）案例三、四", hours: 3 },
-                { date: "7月30日", weekday: "周三", subject: "案例分析", name: "案例分析真题分析总结", hours: 2 },
-                { date: "7月31日", weekday: "周四", subject: "真题训练", name: "2022年真题全科实战", hours: 4 },
-                { date: "8月1日", weekday: "周五", subject: "真题训练", name: "2022年真题全科实战", hours: 4 },
-                { date: "8月2日", weekday: "周六", subject: "真题训练", name: "真题分析总结", hours: 3 },
-                { date: "8月3日", weekday: "周日", subject: "复习巩固", name: "强化阶段总复习 + 自测", hours: 3 }
-            ]},
-            // 第21-26周：冲刺阶段
-            { week: 21, stage: "冲刺阶段", tasks: [
-                { date: "8月4日", weekday: "周一", subject: "真题训练", name: "2021年真题全科实战", hours: 4 },
-                { date: "8月5日", weekday: "周二", subject: "真题训练", name: "2021年真题全科实战", hours: 4 },
-                { date: "8月6日", weekday: "周三", subject: "真题训练", name: "真题分析总结", hours: 2 },
-                { date: "8月7日", weekday: "周四", subject: "真题训练", name: "2020年真题全科实战", hours: 4 },
-                { date: "8月8日", weekday: "周五", subject: "真题训练", name: "2020年真题全科实战", hours: 4 },
-                { date: "8月9日", weekday: "周六", subject: "真题训练", name: "真题分析总结", hours: 3 },
-                { date: "8月10日", weekday: "周日", subject: "复习巩固", name: "历年真题错题整理", hours: 3 }
-            ]},
-            { week: 22, stage: "冲刺阶段", tasks: [
-                { date: "8月11日", weekday: "周一", subject: "案例分析", name: "案例分析计算题强化训练", hours: 3 },
-                { date: "8月12日", weekday: "周二", subject: "案例分析", name: "案例分析计算题强化训练", hours: 3 },
-                { date: "8月13日", weekday: "周三", subject: "案例分析", name: "案例分析综合题强化训练", hours: 3 },
-                { date: "8月14日", weekday: "周四", subject: "案例分析", name: "案例分析综合题强化训练", hours: 3 },
-                { date: "8月15日", weekday: "周五", subject: "复习巩固", name: "各科高频考点强化", hours: 3 },
-                { date: "8月16日", weekday: "周六", subject: "复习巩固", name: "强化阶段总结 + 查漏补缺", hours: 3 },
-                { date: "8月17日", weekday: "周日", subject: "复习巩固", name: "强化阶段总结 + 查漏补缺", hours: 3 }
-            ]},
-            { week: 23, stage: "冲刺阶段", tasks: [
-                { date: "8月18日", weekday: "周一", subject: "模拟考试", name: "模拟考试（一）- 造价管理", hours: 2.5 },
-                { date: "8月19日", weekday: "周二", subject: "模拟考试", name: "模拟考试（一）- 工程计价", hours: 2.5 },
-                { date: "8月20日", weekday: "周三", subject: "模拟考试", name: "模拟考试（一）- 工程计量", hours: 2.5 },
-                { date: "8月21日", weekday: "周四", subject: "模拟考试", name: "模拟考试（一）- 案例分析", hours: 4 },
-                { date: "8月22日", weekday: "周五", subject: "模拟考试", name: "模拟试卷分析与总结", hours: 3 },
-                { date: "8月23日", weekday: "周六", subject: "模拟考试", name: "模拟考试（二）- 造价管理 + 工程计价", hours: 5 },
-                { date: "8月24日", weekday: "周日", subject: "模拟考试", name: "模拟试卷分析与总结", hours: 3 }
-            ]},
-            { week: 24, stage: "冲刺阶段", tasks: [
-                { date: "8月25日", weekday: "周一", subject: "模拟考试", name: "模拟考试（二）- 工程计量", hours: 2.5 },
-                { date: "8月26日", weekday: "周二", subject: "模拟考试", name: "模拟考试（二）- 案例分析", hours: 4 },
-                { date: "8月27日", weekday: "周三", subject: "模拟考试", name: "模拟试卷分析与总结", hours: 3 },
-                { date: "8月28日", weekday: "周四", subject: "模拟考试", name: "模拟考试（三）- 全科模拟", hours: 5 },
-                { date: "8月29日", weekday: "周五", subject: "模拟考试", name: "模拟试卷分析与总结", hours: 3 },
-                { date: "8月30日", weekday: "周六", subject: "复习巩固", name: "错题本整理与回顾", hours: 3 },
-                { date: "8月31日", weekday: "周日", subject: "复习巩固", name: "冲刺阶段总结", hours: 3 }
-            ]},
-            { week: 25, stage: "冲刺阶段", tasks: [
-                { date: "9月1日", weekday: "周一", subject: "模拟考试", name: "模拟考试（四）- 造价管理 + 工程计价", hours: 5 },
-                { date: "9月2日", weekday: "周二", subject: "模拟考试", name: "模拟试卷分析", hours: 2 },
-                { date: "9月3日", weekday: "周三", subject: "模拟考试", name: "模拟考试（四）- 工程计量 + 案例分析", hours: 5 },
-                { date: "9月4日", weekday: "周四", subject: "模拟考试", name: "模拟试卷分析", hours: 2 },
-                { date: "9月5日", weekday: "周五", subject: "复习巩固", name: "各科薄弱环节针对性训练", hours: 3 },
-                { date: "9月6日", weekday: "周六", subject: "模拟考试", name: "模拟考试（五）全科模拟", hours: 5 },
-                { date: "9月7日", weekday: "周日", subject: "模拟考试", name: "模拟试卷分析", hours: 3 }
-            ]},
-            { week: 26, stage: "冲刺阶段", tasks: [
-                { date: "9月8日", weekday: "周一", subject: "案例分析", name: "案例分析计算题专项突破", hours: 3 },
-                { date: "9月9日", weekday: "周二", subject: "案例分析", name: "案例分析计算题专项突破", hours: 3 },
-                { date: "9月10日", weekday: "周三", subject: "案例分析", name: "案例分析综合题专项突破", hours: 3 },
-                { date: "9月11日", weekday: "周四", subject: "案例分析", name: "案例分析综合题专项突破", hours: 3 },
-                { date: "9月12日", weekday: "周五", subject: "复习巩固", name: "各科高频错题回顾", hours: 3 },
-                { date: "9月13日", weekday: "周六", subject: "模拟考试", name: "模拟考试（六）- 全科模拟", hours: 5 },
-                { date: "9月14日", weekday: "周日", subject: "复习巩固", name: "模拟试卷分析 + 错题整理", hours: 3 }
-            ]},
-            // 第27-30周：考前阶段
-            { week: 27, stage: "考前阶段", tasks: [
-                { date: "9月15日", weekday: "周一", subject: "造价管理", name: "重点章节回顾", hours: 3 },
-                { date: "9月16日", weekday: "周二", subject: "工程计价", name: "重点章节回顾", hours: 3 },
-                { date: "9月17日", weekday: "周三", subject: "工程计量", name: "重点章节回顾", hours: 3 },
-                { date: "9月18日", weekday: "周四", subject: "案例分析", name: "重点题型回顾", hours: 3 },
-                { date: "9月19日", weekday: "周五", subject: "复习巩固", name: "各科重点公式与知识点回顾", hours: 3 },
-                { date: "9月20日", weekday: "周六", subject: "复习巩固", name: "错题本最后回顾", hours: 3 },
-                { date: "9月21日", weekday: "周日", subject: "复习巩固", name: "本周学习内容复习", hours: 3 }
-            ]},
-            { week: 28, stage: "考前阶段", tasks: [
-                { date: "9月22日", weekday: "周一", subject: "造价管理", name: "易错点回顾", hours: 3 },
-                { date: "9月23日", weekday: "周二", subject: "工程计价", name: "易错点回顾", hours: 3 },
-                { date: "9月24日", weekday: "周三", subject: "工程计量", name: "易错点回顾", hours: 3 },
-                { date: "9月25日", weekday: "周四", subject: "案例分析", name: "答题技巧回顾", hours: 3 },
-                { date: "9月26日", weekday: "周五", subject: "复习巩固", name: "各科计算公式最后巩固", hours: 3 },
-                { date: "9月27日", weekday: "周六", subject: "模拟考试", name: "模拟考试（七）全科模拟", hours: 5 },
-                { date: "9月28日", weekday: "周日", subject: "模拟考试", name: "模拟试卷分析", hours: 3 }
-            ]},
-            { week: 29, stage: "考前阶段", tasks: [
-                { date: "9月29日", weekday: "周一", subject: "复习巩固", name: "各科最后回顾与知识点梳理", hours: 3 },
-                { date: "9月30日", weekday: "周二", subject: "案例分析", name: "案例分析题型最后回顾", hours: 3 },
-                { date: "10月1日", weekday: "周三", subject: "复习巩固", name: "错题本最后回顾", hours: 2 },
-                { date: "10月2日", weekday: "周四", subject: "复习巩固", name: "重点公式与知识点最后回顾", hours: 2 },
-                { date: "10月3日", weekday: "周五", subject: "复习巩固", name: "国庆假期复习（可选）", hours: 2 },
-                { date: "10月4日", weekday: "周六", subject: "复习巩固", name: "国庆假期复习（可选）", hours: 2 },
-                { date: "10月5日", weekday: "周日", subject: "复习巩固", name: "国庆假期复习（可选）", hours: 2 }
-            ]},
-            { week: 30, stage: "考前阶段", tasks: [
-                { date: "10月6日", weekday: "周一", subject: "复习巩固", name: "各科最后梳理与回顾", hours: 3 },
-                { date: "10月7日", weekday: "周二", subject: "复习巩固", name: "各科最后梳理与回顾", hours: 3 },
-                { date: "10月8日", weekday: "周三", subject: "案例分析", name: "案例分析最后回顾", hours: 3 },
-                { date: "10月9日", weekday: "周四", subject: "复习巩固", name: "重点知识点最后巩固", hours: 3 },
-                { date: "10月10日", weekday: "周五", subject: "考前准备", name: "考试用品准备与心态调整", hours: 2 },
-                { date: "10月11日", weekday: "周六", subject: "考前准备", name: "考场熟悉与最后准备", hours: 2 },
-                { date: "10月12日", weekday: "周日", subject: "考前准备", name: "休息调整，保持良好状态", hours: 2 }
-            ]},
-            // 考前冲刺 + 考试日
-            { week: 31, stage: "考前阶段", tasks: [
-                { date: "10月13日", weekday: "周一", subject: "考前冲刺", name: "重点公式最后回顾", hours: 2 },
-                { date: "10月14日", weekday: "周二", subject: "考前冲刺", name: "错题本最后浏览", hours: 2 },
-                { date: "10月15日", weekday: "周三", subject: "考前冲刺", name: "调整作息，准备考试", hours: 2 },
-                { date: "10月16日", weekday: "周四", subject: "考前冲刺", name: "休息，保持良好状态", hours: 1 },
-                { date: "10月17日", weekday: "周五", subject: "考试", name: "造价管理、工程计价", hours: 0, isExam: true },
-                { date: "10月18日", weekday: "周六", subject: "考试", name: "工程计量、案例分析", hours: 0, isExam: true }
-            ]}
-        ];
-        
-        // 当前筛选状态
-        let currentFilter = 'all';
-        
-        // ==================== 云存储API ====================
-        
-        // 获取存储key
-        function getStorageKey(userId) {
-            return CLOUD_CONFIG.syncKeyPrefix + userId;
-        }
-        
-        // 保存数据到云端
-        async function saveToCloud(data) {
-            if (!currentUserId) return;
-            
-            const cloudData = {
-                userId: currentUserId,
-                data: data,
-                lastUpdate: new Date().toISOString()
-            };
-            
-            // 使用 localStorage 模拟云存储（同一浏览器不同标签页共享）
-            localStorage.setItem(getStorageKey(currentUserId), JSON.stringify(cloudData));
-            
-            // 如果需要真正的云同步，可以在这里调用后端API
-            // 例如：await fetch('https://your-api.com/sync', { method: 'POST', body: JSON.stringify(cloudData) });
-            
-            updateSyncStatus(true);
-        }
-        
-        // 从云端加载数据
-        async function loadFromCloud() {
-            if (!currentUserId) return {};
-            
-            // 使用 localStorage 模拟云存储
-            const stored = localStorage.getItem(getStorageKey(currentUserId));
-            if (stored) {
-                const cloudData = JSON.parse(stored);
-                updateSyncStatus(true);
-                return cloudData.data || {};
-            }
-            
-            updateSyncStatus(false);
-            return {};
-        }
-        
-        // 更新同步状态显示
-        function updateSyncStatus(isOnline) {
-            const statusEl = document.getElementById('syncStatus');
-            const userInfoEl = document.getElementById('userInfo');
-            
-            if (isOnline && currentUserId) {
-                statusEl.classList.remove('offline');
-                statusEl.querySelector('.sync-text').textContent = '云同步已启用';
-                userInfoEl.textContent = `用户: ${currentUserId}`;
-            } else if (currentUserId) {
-                statusEl.classList.add('offline');
-                statusEl.querySelector('.sync-text').textContent = '离线模式';
-                userInfoEl.textContent = `用户: ${currentUserId}`;
-            } else {
-                statusEl.classList.add('offline');
-                statusEl.querySelector('.sync-text').textContent = '本地存储模式';
-                userInfoEl.textContent = '';
-            }
-        }
-        
-        // ==================== 用户管理 ====================
-        
-        // 检查是否已设置用户ID
-        function checkUserId() {
-            currentUserId = localStorage.getItem('yizao_user_id');
-            if (!currentUserId) {
-                document.getElementById('loginModal').classList.add('show');
-            } else {
-                updateSyncStatus(true);
-                loadAndInit();
-            }
-        }
-        
-        // 保存用户ID
-        function saveUserId() {
-            const userId = document.getElementById('userIdInput').value.trim();
-            if (!userId) {
-                alert('请输入用户ID');
-                return;
-            }
-            
-            currentUserId = userId;
-            localStorage.setItem('yizao_user_id', userId);
-            document.getElementById('loginModal').classList.remove('show');
-            updateSyncStatus(true);
-            loadAndInit();
-        }
-        
-        // 跳过登录
-        function skipLogin() {
-            currentUserId = null;
-            document.getElementById('loginModal').classList.remove('show');
-            updateSyncStatus(false);
-            loadAndInit();
-        }
-        
-        // ==================== 数据管理 ====================
-        
-        // 加载打卡数据
-        async function loadCheckData() {
-            if (currentUserId) {
-                return await loadFromCloud();
-            }
-            const data = localStorage.getItem('yizaoStudyPlan_local');
-            return data ? JSON.parse(data) : {};
-        }
-        
-        // 保存打卡数据
-        async function saveCheckData(data) {
-            if (currentUserId) {
-                await saveToCloud(data);
-            } else {
-                localStorage.setItem('yizaoStudyPlan_local', JSON.stringify(data));
-            }
-        }
-        
-        // 切换打卡状态
-        async function toggleCheck(taskId) {
-            const data = await loadCheckData();
-            data[taskId] = !data[taskId];
-            await saveCheckData(data);
-            updateUI();
-        }
-        
-        // ==================== UI渲染 ====================
-        
-        // 更新UI
-        async function updateUI() {
-            const data = await loadCheckData();
-            let totalTasks = 0;
-            let completedTasks = 0;
-            let totalHours = 0;
-            let completedHours = 0;
-            
-            document.querySelectorAll('.task-item').forEach(item => {
-                const taskId = item.dataset.taskId;
-                const hours = parseFloat(item.dataset.hours) || 0;
-                const stage = item.dataset.stage;
-                const isCompleted = data[taskId];
-                
-                let shouldShow = true;
-                if (currentFilter === 'completed') {
-                    shouldShow = isCompleted;
-                } else if (currentFilter === 'pending') {
-                    shouldShow = !isCompleted;
-                } else if (currentFilter !== 'all' && currentFilter !== stage) {
-                    shouldShow = false;
-                }
-                
-                if (shouldShow) {
-                    item.classList.remove('hidden');
-                    totalTasks++;
-                    totalHours += hours;
-                    if (isCompleted) {
-                        completedTasks++;
-                        completedHours += hours;
-                    }
-                } else {
-                    item.classList.add('hidden');
-                }
-                
-                if (isCompleted) {
-                    item.classList.add('completed');
-                    item.querySelector('.task-checkbox').classList.add('checked');
-                } else {
-                    item.classList.remove('completed');
-                    item.querySelector('.task-checkbox').classList.remove('checked');
-                }
-            });
-            
-            document.getElementById('totalTasks').textContent = totalTasks;
-            document.getElementById('completedTasks').textContent = completedTasks;
-            document.getElementById('remainingTasks').textContent = totalTasks - completedTasks;
-            document.getElementById('totalHours').textContent = totalHours.toFixed(1) + 'h';
-            document.getElementById('completedHours').textContent = completedHours.toFixed(1) + 'h';
-            document.getElementById('remainingHours').textContent = (totalHours - completedHours).toFixed(1) + 'h';
-            
-            const rate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
-            document.getElementById('completionRate').textContent = rate + '%';
-            document.getElementById('progressFill').style.width = rate + '%';
-            document.getElementById('progressFill').textContent = rate + '%';
-            
-            updateWeekProgress(data);
-            updateStageProgress(data);
-        }
-        
-        // 更新每周进度
-        function updateWeekProgress(data) {
-            document.querySelectorAll('.week-section').forEach(section => {
-                const visibleTasks = section.querySelectorAll('.task-item:not(.hidden)');
-                const allTasks = section.querySelectorAll('.task-item');
-                const completedTasks = section.querySelectorAll('.task-item.completed');
-                
-                let weekTotalHours = 0;
-                let weekCompletedHours = 0;
-                allTasks.forEach(task => {
-                    const hours = parseFloat(task.dataset.hours) || 0;
-                    weekTotalHours += hours;
-                    if (data[task.dataset.taskId]) {
-                        weekCompletedHours += hours;
-                    }
-                });
-                
-                section.querySelector('.week-progress').textContent = 
-                    `${completedTasks.length}/${allTasks.length}`;
-                section.querySelector('.week-hours').textContent = 
-                    `${weekCompletedHours.toFixed(1)}/${weekTotalHours.toFixed(1)}h`;
-                
-                if (visibleTasks.length === 0) {
-                    section.classList.add('hidden');
-                } else {
-                    section.classList.remove('hidden');
-                }
-            });
-        }
-        
-        // 更新阶段进度
-        function updateStageProgress(data) {
-            document.querySelectorAll('.stage-section').forEach(section => {
-                const visibleWeeks = section.querySelectorAll('.week-section:not(.hidden)');
-                const allTasks = section.querySelectorAll('.task-item');
-                const completedTasks = section.querySelectorAll('.task-item.completed');
-                
-                let stageTotalHours = 0;
-                let stageCompletedHours = 0;
-                allTasks.forEach(task => {
-                    const hours = parseFloat(task.dataset.hours) || 0;
-                    stageTotalHours += hours;
-                    if (data[task.dataset.taskId]) {
-                        stageCompletedHours += hours;
-                    }
-                });
-                
-                section.querySelector('.stage-progress').textContent = 
-                    `完成: ${completedTasks.length}/${allTasks.length}`;
-                section.querySelector('.stage-hours').textContent = 
-                    `${stageCompletedHours.toFixed(1)}/${stageTotalHours.toFixed(1)}h`;
-                
-                section.style.display = visibleWeeks.length === 0 ? 'none' : 'block';
-            });
-        }
-        
-        // 生成任务列表
-        function generateTasks() {
-            const container = document.getElementById('tasksContainer');
-            const stages = ['基础阶段', '强化阶段', '冲刺阶段', '考前阶段'];
-            let taskId = 0;
-            
-            stages.forEach(stage => {
-                const stageSection = document.createElement('div');
-                stageSection.className = 'stage-section';
-                stageSection.dataset.stage = stage;
-                
-                const weeksInStage = studyPlan.filter(w => w.stage === stage);
-                
-                stageSection.innerHTML = `
-                    <div class="stage-header stage-${stage}" onclick="toggleStage(this)">
-                        <div class="stage-title">
-                            <span class="arrow">▼</span>
-                            ${stage} (${weeksInStage.length}周)
-                        </div>
-                        <div class="stage-info">
-                            <div class="stage-progress">完成: 0/0</div>
-                            <div class="stage-hours">0/0h</div>
-                        </div>
-                    </div>
-                    <div class="stage-content show">
-                        ${weeksInStage.map(weekData => {
-                            return `
-                                <div class="week-section" data-week="${weekData.week}">
-                                    <div class="week-header" onclick="toggleWeek(this)">
-                                        <div class="week-title">
-                                            <span class="arrow">▶</span>
-                                            第${weekData.week}周
-                                        </div>
-                                        <div class="week-info">
-                                            <div class="week-progress">0/0</div>
-                                            <div class="week-hours">0/0h</div>
-                                        </div>
-                                    </div>
-                                    <div class="task-list">
-                                        ${weekData.tasks.map(task => {
-                                            const currentTaskId = `task_${taskId++}`;
-                                            const isExam = task.isExam ? 'exam-day' : '';
-                                            return `
-                                                <div class="task-item ${isExam}" data-task-id="${currentTaskId}" data-stage="${stage}" data-hours="${task.hours || 0}">
-                                                    <div class="task-checkbox" onclick="toggleCheck('${currentTaskId}')"></div>
-                                                    <div class="task-content">
-                                                        <div class="task-name">${task.name}</div>
-                                                        <div class="task-meta">
-                                                            <span class="task-subject subject-${task.subject}">${task.subject}</span>
-                                                            <span class="task-date">${task.date} ${task.weekday}</span>
-                                                            ${task.hours > 0 ? `<span class="task-hours">${task.hours}h</span>` : ''}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            `;
-                                        }).join('')}
-                                    </div>
-                                </div>
-                            `;
-                        }).join('')}
-                    </div>
-                `;
-                container.appendChild(stageSection);
-            });
-        }
-        
-        // 展开/收起阶段
-        function toggleStage(header) {
-            const content = header.nextElementSibling;
-            const arrow = header.querySelector('.arrow');
-            content.classList.toggle('show');
-            arrow.textContent = content.classList.contains('show') ? '▼' : '▶';
-        }
-        
-        // 展开/收起周
-        function toggleWeek(header) {
-            const taskList = header.nextElementSibling;
-            const arrow = header.querySelector('.arrow');
-            taskList.classList.toggle('show');
-            arrow.textContent = taskList.classList.contains('show') ? '▼' : '▶';
-        }
-        
-        // 设置筛选功能
-        function setupFilters() {
-            document.querySelectorAll('.filter-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-                    this.classList.add('active');
-                    
-                    currentFilter = this.dataset.filter;
-                    
-                    document.querySelectorAll('.stage-content').forEach(content => content.classList.add('show'));
-                    document.querySelectorAll('.stage-section .arrow').forEach(arrow => arrow.textContent = '▼');
-                    document.querySelectorAll('.task-list').forEach(list => list.classList.add('show'));
-                    document.querySelectorAll('.week-section .arrow').forEach(arrow => arrow.textContent = '▼');
-                    
-                    updateUI();
-                });
-            });
-        }
-        
-        // 导出数据
-        async function exportData() {
-            const data = await loadCheckData();
-            const exportObj = {
-                exportDate: new Date().toLocaleString('zh-CN'),
-                userId: currentUserId || 'local',
-                tasks: []
-            };
-            
-            let taskId = 0;
-            studyPlan.forEach(weekData => {
-                weekData.tasks.forEach(task => {
-                    const currentTaskId = `task_${taskId++}`;
-                    exportObj.tasks.push({
-                        week: weekData.week,
-                        stage: weekData.stage,
-                        date: task.date,
-                        subject: task.subject,
-                        name: task.name,
-                        hours: task.hours,
-                        completed: data[currentTaskId] || false
-                    });
-                });
-            });
-            
-            const blob = new Blob([JSON.stringify(exportObj, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `一造学习计划打卡记录_${new Date().toISOString().slice(0,10)}.json`;
-            a.click();
-            URL.revokeObjectURL(url);
-        }
-        
-        // 清除所有数据
-        async function clearAllData() {
-            if (confirm('确定要清除所有打卡数据吗？此操作不可恢复！')) {
-                if (currentUserId) {
-                    localStorage.removeItem(getStorageKey(currentUserId));
-                }
-                localStorage.removeItem('yizaoStudyPlan_local');
-                currentFilter = 'all';
-                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-                document.querySelector('.filter-btn[data-filter="all"]').classList.add('active');
-                await updateUI();
-            }
-        }
-        
-        // 加载并初始化
-        async function loadAndInit() {
-            generateTasks();
-            setupFilters();
-            await updateUI();
-        }
-        
-        // 初始化
-        document.addEventListener('DOMContentLoaded', function() {
-            checkUserId();
-        });
-    </script>
-</body>
-</html>
+考试日期: 2026年10月17-18日
+离线模式
+用户: 775377041
+188
+总任务数
+0
+已完成
+188
+未完成
+0%
+完成率
+526.0h
+计划总时长
+0.0h
+已完成时长
+526.0h
+剩余时长
+0%
+筛选:
+全部
+基础阶段
+强化阶段
+冲刺阶段
+考前阶段
+已完成
+未完成
+导出数据
+清除数据
+▼
+基础阶段 (12周)
+完成: 0/84
+0.0/205.5h
+▶
+第1周
+0/7
+0.0/17.0h
+▶
+第2周
+0/7
+0.0/17.0h
+▶
+第3周
+0/7
+0.0/17.0h
+▶
+第4周
+0/7
+0.0/17.5h
+▶
+第5周
+0/7
+0.0/17.0h
+▶
+第6周
+0/7
+0.0/17.0h
+▶
+第7周
+0/7
+0.0/17.5h
+▶
+第8周
+0/7
+0.0/17.0h
+▶
+第9周
+0/7
+0.0/17.0h
+▶
+第10周
+0/7
+0.0/17.0h
+▶
+第11周
+0/7
+0.0/17.0h
+▶
+第12周
+0/7
+0.0/17.5h
+▼
+强化阶段 (8周)
+完成: 0/56
+0.0/165.5h
+▶
+第13周
+0/7
+0.0/20.0h
+▶
+第14周
+0/7
+0.0/20.0h
+▶
+第15周
+0/7
+0.0/21.0h
+▶
+第16周
+0/7
+0.0/21.0h
+▶
+第17周
+0/7
+0.0/21.0h
+▶
+第18周
+0/7
+0.0/20.0h
+▶
+第19周
+0/7
+0.0/19.5h
+▶
+第20周
+0/7
+0.0/23.0h
+▼
+冲刺阶段 (4周)
+完成: 0/28
+0.0/103.0h
+▶
+第21周
+0/7
+0.0/25.0h
+▶
+第22周
+0/7
+0.0/23.5h
+▶
+第23周
+0/7
+0.0/27.0h
+▶
+第24周
+0/7
+0.0/27.5h
+▼
+考前阶段 (3周)
+完成: 0/20
+0.0/52.0h
+▶
+第25周
+0/7
+0.0/23.0h
+▶
+第26周
+0/7
+0.0/20.0h
+▶
+第27周
+0/6
+0.0/9.0h
